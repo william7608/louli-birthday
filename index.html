@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎮 LOULI's Birthday — Friday May 30</title>
+<title>🎮 LOULI's 21st Birthday — Friday May 30</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -157,23 +157,8 @@
     init(); draw();
   })();
 
-  /* Firebase Realtime Database — REST API */
-  const FB = 'https://louli-birthday-default-rtdb.firebaseio.com/rsvp.json';
-
-  async function fbRead() {
-    const r = await fetch(FB);
-    const d = await r.json();
-    return d || { yes:[], no:[] };
-  }
-
-  async function fbWrite(data) {
-    const r = await fetch(FB, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    return r.ok;
-  }
+  /* Google Apps Script backend */
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzry0p9g3pz4swrg1412zDMFIzP80cgzHOCzTplIXI8i12LiSze4pmdciMbOpJeOifxQ/exec';
 
   let rsvpData = { yes:[], no:[] };
 
@@ -197,7 +182,8 @@
 
   async function loadBoard() {
     try {
-      const data = await fbRead();
+      const res = await fetch(SCRIPT_URL);
+      const data = await res.json();
       renderBoard(data);
       setStatus('✔ LIVE SYNC ACTIVE', 'ok');
     } catch(e) {
@@ -231,13 +217,20 @@
     btnY.disabled = btnN.disabled = true;
     setStatus('SAVING...', '');
 
-    const updated = { yes:[...rsvpData.yes], no:[...rsvpData.no] };
-    updated[choice].push(name);
-
     try {
-      await fbWrite(updated);
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, choice })
+      });
+
+      /* optimistic update since no-cors returns no body */
+      const updated = { yes:[...rsvpData.yes], no:[...rsvpData.no] };
+      updated[choice].push(name);
       renderBoard(updated);
       setStatus('✔ SAVED!', 'ok');
+
     } catch(e) {
       setStatus('⚠ SAVE FAILED', 'err');
     }
